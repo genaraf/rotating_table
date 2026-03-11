@@ -1,0 +1,4 @@
+/sdkconfig.old
+/build/
+/cmake-build-debug/
+/.espressif/
