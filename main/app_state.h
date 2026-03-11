@@ -14,6 +14,7 @@ typedef enum {
 typedef struct {
     char name[24];
     float rpm;
+    int rotation_dir;
     float turn_grad;
     float min_angle;
     float max_angle;
@@ -28,6 +29,7 @@ typedef struct {
 
     bool power_on;
     float rpm;
+    int rotation_dir;
     float turn_grad;
     float min_angle;
     float max_angle;

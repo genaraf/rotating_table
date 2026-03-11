@@ -131,7 +131,8 @@ static void run_normal_step(float dt_s) {
 
     while (s_step_phase >= 1.0f) {
         s_step_phase -= 1.0f;
-        int dir = (STEPPER_DIR > 0) ? 1 : -1;
+        int cfg_dir = (g_cfg.rotation_dir >= 0) ? 1 : -1;
+        int dir = (STEPPER_DIR > 0 ? 1 : -1) * cfg_dir;
         s_step_idx = (s_step_idx + (dir > 0 ? 1 : 7)) & 0x7;
         stepper_write_phase(s_step_idx);
         s_total_steps += dir;

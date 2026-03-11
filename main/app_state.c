@@ -13,6 +13,7 @@
 #define DEFAULT_AP_PASS  "12345678"
 
 #define DEFAULT_RPM       2.0f
+#define DEFAULT_ROT_DIR   1
 #define DEFAULT_TURN_GRAD 10.0f
 #define DEFAULT_MIN_ANGLE -45.0f
 #define DEFAULT_MAX_ANGLE 45.0f
@@ -35,6 +36,7 @@ static void cfg_set_defaults(app_config_t *cfg) {
 
     cfg->power_on = false;
     cfg->rpm = DEFAULT_RPM;
+    cfg->rotation_dir = DEFAULT_ROT_DIR;
     cfg->turn_grad = DEFAULT_TURN_GRAD;
     cfg->min_angle = DEFAULT_MIN_ANGLE;
     cfg->max_angle = DEFAULT_MAX_ANGLE;
@@ -43,6 +45,7 @@ static void cfg_set_defaults(app_config_t *cfg) {
     cfg->active_profile = 0;
     snprintf(cfg->profiles[0].name, sizeof(cfg->profiles[0].name), "default");
     cfg->profiles[0].rpm = cfg->rpm;
+    cfg->profiles[0].rotation_dir = cfg->rotation_dir;
     cfg->profiles[0].turn_grad = cfg->turn_grad;
     cfg->profiles[0].min_angle = cfg->min_angle;
     cfg->profiles[0].max_angle = cfg->max_angle;
@@ -51,6 +54,8 @@ static void cfg_set_defaults(app_config_t *cfg) {
 void cfg_clamp(app_config_t *cfg) {
     if (cfg->rpm < 0.1f) cfg->rpm = 0.1f;
     if (cfg->rpm > 12.0f) cfg->rpm = 12.0f;
+    if (cfg->rotation_dir >= 0) cfg->rotation_dir = 1;
+    else cfg->rotation_dir = -1;
 
     if (cfg->turn_grad < 0.0f) cfg->turn_grad = -cfg->turn_grad;
     if (cfg->turn_grad > 360.0f) cfg->turn_grad = 360.0f;
@@ -64,6 +69,20 @@ void cfg_clamp(app_config_t *cfg) {
 
     if (cfg->active_profile < 0) cfg->active_profile = 0;
     if (cfg->active_profile >= cfg->profile_count) cfg->active_profile = cfg->profile_count - 1;
+
+    for (int i = 0; i < cfg->profile_count; i++) {
+        if (cfg->profiles[i].rpm < 0.1f) cfg->profiles[i].rpm = 0.1f;
+        if (cfg->profiles[i].rpm > 12.0f) cfg->profiles[i].rpm = 12.0f;
+        if (cfg->profiles[i].rotation_dir >= 0) cfg->profiles[i].rotation_dir = 1;
+        else cfg->profiles[i].rotation_dir = -1;
+        if (cfg->profiles[i].turn_grad < 0.0f) cfg->profiles[i].turn_grad = -cfg->profiles[i].turn_grad;
+        if (cfg->profiles[i].turn_grad > 360.0f) cfg->profiles[i].turn_grad = 360.0f;
+        if (cfg->profiles[i].min_angle < TILT_MIN_DEG_LIMIT) cfg->profiles[i].min_angle = TILT_MIN_DEG_LIMIT;
+        if (cfg->profiles[i].max_angle > TILT_MAX_DEG_LIMIT) cfg->profiles[i].max_angle = TILT_MAX_DEG_LIMIT;
+        if (cfg->profiles[i].max_angle < cfg->profiles[i].min_angle + 1.0f) {
+            cfg->profiles[i].max_angle = cfg->profiles[i].min_angle + 1.0f;
+        }
+    }
 }
 
 esp_err_t cfg_save(void) {
@@ -103,6 +122,7 @@ void apply_profile(int idx) {
 
     profile_t *p = &g_cfg.profiles[idx];
     g_cfg.rpm = p->rpm;
+    g_cfg.rotation_dir = p->rotation_dir;
     g_cfg.turn_grad = p->turn_grad;
     g_cfg.min_angle = p->min_angle;
     g_cfg.max_angle = p->max_angle;
