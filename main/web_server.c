@@ -47,6 +47,7 @@ static const char s_index_html[] =
 "<div id='p1' class='pane a'>"
 "<fieldset><legend>Main Control</legend>"
 "<div class='row'><div><label>Profile</label><div id='active_name' class='kpi'>-</div></div>"
+"<div><label>Rotation direction</label><div id='rot_dir_kpi' class='kpi'>CW</div></div>"
 "<div><label>Table rotation angle</label><div id='table_angle' class='kpi'>0.0 deg</div></div>"
 "<div><label>Tilt angle</label><div id='tilt_angle' class='kpi'>0.0 deg</div></div></div>"
 "<button id='startStopBtn' onclick='toggleStartStop()'>Start</button>"
@@ -58,7 +59,8 @@ static const char s_index_html[] =
 "<div class='line'><div style='flex:1'><label>Profile select</label><select id='profile_select'></select></div>"
 "<div style='flex:1'><label>Profile name</label><input id='profile_name_combo' list='profile_list' placeholder='Type name'></div>"
 "<button onclick='addProfile()'>Add</button></div><datalist id='profile_list'></datalist>"
-"<div class='row'><div><label>RPM</label><input id='rpm' type='number' step='0.1'></div>"
+"<div class='row'><div><label>Rotation direction</label><select id='rotation_dir'><option value='1'>CW</option><option value='-1'>CCW</option></select></div>"
+"<div><label>RPM</label><input id='rpm' type='number' step='0.1'></div>"
 "<div><label>Turn/Grad (deg per turn)</label><input id='turn_grad' type='number' step='0.1'></div></div>"
 "<div class='row'><div><label>Min angle</label><input id='min_angle' type='number' step='1'></div>"
 "<div><label>Max angle</label><input id='max_angle' type='number' step='1'></div></div>"
@@ -90,14 +92,14 @@ static const char s_index_html[] =
 "function profName(s){const i=s.active_profile||0;return (s.profiles&&s.profiles[i])?s.profiles[i].name:'-';}"
 "function fillDatalist(){const dl=document.getElementById('profile_list');dl.innerHTML='';profilesCache.forEach(p=>{const o=document.createElement('option');o.value=p.name;dl.appendChild(o);});}"
 "function fillProfileSelect(){const s=document.getElementById('profile_select');s.innerHTML='';profilesCache.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=i+': '+(p.name||'(empty)');s.appendChild(o);});if(selectedProfileIndex>=0&&selectedProfileIndex<profilesCache.length){s.value=String(selectedProfileIndex);} }"
-"function editorData(){return {name:val('profile_name_combo').trim(),rpm:+val('rpm'),turn_grad:+val('turn_grad'),min_angle:+val('min_angle'),max_angle:+val('max_angle')};}"
-"function profileEq(p,d){return p&&Math.abs(p.rpm-d.rpm)<eps&&Math.abs(p.turn_grad-d.turn_grad)<eps&&Math.abs(p.min_angle-d.min_angle)<eps&&Math.abs(p.max_angle-d.max_angle)<eps&&((p.name||'')===d.name);}"
+"function editorData(){return {name:val('profile_name_combo').trim(),rotation_dir:+val('rotation_dir'),rpm:+val('rpm'),turn_grad:+val('turn_grad'),min_angle:+val('min_angle'),max_angle:+val('max_angle')};}"
+"function profileEq(p,d){return p&&((p.rotation_dir||1)===(d.rotation_dir||1))&&Math.abs(p.rpm-d.rpm)<eps&&Math.abs(p.turn_grad-d.turn_grad)<eps&&Math.abs(p.min_angle-d.min_angle)<eps&&Math.abs(p.max_angle-d.max_angle)<eps&&((p.name||'')===d.name);}"
 "function updateDirty(){if(lockInputs||selectedProfileIndex<0||selectedProfileIndex>=profilesCache.length)return;dirty=!profileEq(profilesCache[selectedProfileIndex],editorData());}"
-"function loadEditor(idx){if(idx<0||idx>=profilesCache.length)return;lockInputs=true;const p=profilesCache[idx];selectedProfileIndex=idx;set('profile_name_combo',p.name||'');set('rpm',p.rpm);set('turn_grad',p.turn_grad);set('min_angle',p.min_angle);set('max_angle',p.max_angle);fillProfileSelect();dirty=false;lockInputs=false;setErr('');}"
+"function loadEditor(idx){if(idx<0||idx>=profilesCache.length)return;lockInputs=true;const p=profilesCache[idx];selectedProfileIndex=idx;set('profile_name_combo',p.name||'');set('rotation_dir',(p.rotation_dir||1));set('rpm',p.rpm);set('turn_grad',p.turn_grad);set('min_angle',p.min_angle);set('max_angle',p.max_angle);fillProfileSelect();dirty=false;lockInputs=false;setErr('');}"
 "function showUnsavedModal(){return new Promise(resolve=>{unsavedResolver=resolve;document.getElementById('unsavedModal').classList.add('a');});}"
 "function resolveUnsavedModal(action){document.getElementById('unsavedModal').classList.remove('a');if(unsavedResolver){const r=unsavedResolver;unsavedResolver=null;r(action);}}"
 "function findByName(name){return profilesCache.findIndex(p=>(p.name||'')===name);}"
-"async function saveProfileCore(showAlert){setErr('');if(selectedProfileIndex<0){setErr('No selected profile');return false;}const d=editorData();if(!d.name){setErr('Profile name must not be empty');return false;}const dup=profilesCache.findIndex((p,i)=>i!==selectedProfileIndex&&(p.name||'')===d.name);if(dup>=0){setErr('Profile name must be unique');return false;}try{await api('/api/profiles','POST',{op:'save',index:selectedProfileIndex,name:d.name,rpm:d.rpm,turn_grad:d.turn_grad,min_angle:d.min_angle,max_angle:d.max_angle});await refresh(true);loadEditor(selectedProfileIndex);if(showAlert){};return true;}catch(e){setErr(String(e.message||e));return false;}}"
+"async function saveProfileCore(showAlert){setErr('');if(selectedProfileIndex<0){setErr('No selected profile');return false;}const d=editorData();if(!d.name){setErr('Profile name must not be empty');return false;}const dup=profilesCache.findIndex((p,i)=>i!==selectedProfileIndex&&(p.name||'')===d.name);if(dup>=0){setErr('Profile name must be unique');return false;}try{await api('/api/profiles','POST',{op:'save',index:selectedProfileIndex,name:d.name,rotation_dir:d.rotation_dir,rpm:d.rpm,turn_grad:d.turn_grad,min_angle:d.min_angle,max_angle:d.max_angle});await refresh(true);loadEditor(selectedProfileIndex);if(showAlert){};return true;}catch(e){setErr(String(e.message||e));return false;}}"
 "async function maybeSwitchProfile(newIdx){if(newIdx===selectedProfileIndex||newIdx<0)return;updateDirty();if(dirty){const a=await showUnsavedModal();if(a==='cancel'){set('profile_name_combo',profilesCache[selectedProfileIndex]?.name||'');return;}if(a==='save'){const ok=await saveProfileCore(false);if(!ok){set('profile_name_combo',profilesCache[selectedProfileIndex]?.name||'');return;}}}loadEditor(newIdx);}"
 "async function onProfileNameChanged(){const idx=findByName(val('profile_name_combo'));if(idx>=0){await maybeSwitchProfile(idx);}else{updateDirty();}}"
 "async function onProfileSelectChanged(){const idx=+val('profile_select');if(Number.isFinite(idx)){await maybeSwitchProfile(idx);} }"
@@ -105,6 +107,7 @@ static const char s_index_html[] =
 "fillProfileSelect();"
 "set('wifi_mode',s.wifi_mode);set('sta_ssid',s.sta_ssid);set('sta_pass',s.sta_pass);set('ap_ssid',s.ap_ssid);set('ap_pass',s.ap_pass);"
 "document.getElementById('active_name').textContent=profName(s);"
+"document.getElementById('rot_dir_kpi').textContent=((s.rotation_dir||1)>=0)?'CW':'CCW';"
 "document.getElementById('table_angle').textContent=(s.table_angle_deg||0).toFixed(1)+' deg';"
 "document.getElementById('tilt_angle').textContent=(s.current_angle||0).toFixed(1)+' deg';"
 "document.getElementById('startStopBtn').textContent=s.power_on?'Stop':'Start';"
@@ -118,9 +121,10 @@ static const char s_index_html[] =
 "async function activateProfile(){if(selectedProfileIndex<0)return;await api('/api/profiles','POST',{op:'activate',index:selectedProfileIndex});await refresh(true);}"
 "async function saveWifi(){await api('/api/config','POST',{wifi_mode:+val('wifi_mode'),sta_ssid:val('sta_ssid'),sta_pass:val('sta_pass'),ap_ssid:val('ap_ssid'),ap_pass:val('ap_pass')});refresh(true);}"
 "async function resetSettingsConfirm(){if(confirm('Reset all settings and reboot?')){await api('/api/reset','POST',{});}}"
-"['profile_name_combo','rpm','turn_grad','min_angle','max_angle'].forEach(id=>{const el=document.getElementById(id);el.addEventListener('input',updateDirty);});"
+"['profile_name_combo','rotation_dir','rpm','turn_grad','min_angle','max_angle'].forEach(id=>{const el=document.getElementById(id);el.addEventListener('input',updateDirty);});"
 "document.getElementById('profile_name_combo').addEventListener('change',onProfileNameChanged);"
 "document.getElementById('profile_select').addEventListener('change',onProfileSelectChanged);"
+"document.getElementById('rotation_dir').addEventListener('change',updateDirty);"
 "refresh(true);setInterval(()=>refresh(false),1000);"
 "</script></body></html>";
 
@@ -145,6 +149,7 @@ static void json_add_profiles(cJSON *root) {
     for (int i = 0; i < g_cfg.profile_count; i++) {
         cJSON *p = cJSON_CreateObject();
         cJSON_AddStringToObject(p, "name", g_cfg.profiles[i].name);
+        cJSON_AddNumberToObject(p, "rotation_dir", g_cfg.profiles[i].rotation_dir);
         cJSON_AddNumberToObject(p, "rpm", g_cfg.profiles[i].rpm);
         cJSON_AddNumberToObject(p, "turn_grad", g_cfg.profiles[i].turn_grad);
         cJSON_AddNumberToObject(p, "min_angle", g_cfg.profiles[i].min_angle);
@@ -169,6 +174,7 @@ static esp_err_t status_get(httpd_req_t *req) {
     cJSON_AddStringToObject(root, "ap_pass", g_cfg.ap_pass);
     cJSON_AddBoolToObject(root, "power_on", g_cfg.power_on);
     cJSON_AddBoolToObject(root, "home_requested", g_home_requested);
+    cJSON_AddNumberToObject(root, "rotation_dir", g_cfg.rotation_dir);
     cJSON_AddNumberToObject(root, "rpm", g_cfg.rpm);
     cJSON_AddNumberToObject(root, "turn_grad", g_cfg.turn_grad);
     cJSON_AddNumberToObject(root, "min_angle", g_cfg.min_angle);
@@ -242,6 +248,7 @@ static esp_err_t config_post(httpd_req_t *req) {
     if ((v = cJSON_GetObjectItem(j, "sta_pass")) && cJSON_IsString(v)) snprintf(g_cfg.sta_pass, sizeof(g_cfg.sta_pass), "%s", v->valuestring);
     if ((v = cJSON_GetObjectItem(j, "ap_ssid")) && cJSON_IsString(v)) snprintf(g_cfg.ap_ssid, sizeof(g_cfg.ap_ssid), "%s", v->valuestring);
     if ((v = cJSON_GetObjectItem(j, "ap_pass")) && cJSON_IsString(v)) snprintf(g_cfg.ap_pass, sizeof(g_cfg.ap_pass), "%s", v->valuestring);
+    if ((v = cJSON_GetObjectItem(j, "rotation_dir")) && cJSON_IsNumber(v)) g_cfg.rotation_dir = (int)v->valuedouble;
     if ((v = cJSON_GetObjectItem(j, "rpm")) && cJSON_IsNumber(v)) g_cfg.rpm = (float)v->valuedouble;
     if ((v = cJSON_GetObjectItem(j, "turn_grad")) && cJSON_IsNumber(v)) g_cfg.turn_grad = (float)v->valuedouble;
     if ((v = cJSON_GetObjectItem(j, "min_angle")) && cJSON_IsNumber(v)) g_cfg.min_angle = (float)v->valuedouble;
@@ -294,6 +301,7 @@ static esp_err_t profiles_post(httpd_req_t *req) {
         if (g_cfg.profile_count < MAX_PROFILES) {
             profile_t *p = &g_cfg.profiles[g_cfg.profile_count++];
             snprintf(p->name, sizeof(p->name), "%s", cJSON_IsString(name) ? name->valuestring : "");
+            p->rotation_dir = g_cfg.rotation_dir;
             p->rpm = g_cfg.rpm;
             p->turn_grad = g_cfg.turn_grad;
             p->min_angle = g_cfg.min_angle;
@@ -316,16 +324,18 @@ static esp_err_t profiles_post(httpd_req_t *req) {
         }
 
         cJSON *rpm = cJSON_GetObjectItem(j, "rpm");
+        cJSON *rotation_dir = cJSON_GetObjectItem(j, "rotation_dir");
         cJSON *turn_grad = cJSON_GetObjectItem(j, "turn_grad");
         cJSON *min_angle = cJSON_GetObjectItem(j, "min_angle");
         cJSON *max_angle = cJSON_GetObjectItem(j, "max_angle");
-        if (!cJSON_IsNumber(rpm) || !cJSON_IsNumber(turn_grad) || !cJSON_IsNumber(min_angle) || !cJSON_IsNumber(max_angle)) {
+        if (!cJSON_IsNumber(rpm) || !cJSON_IsNumber(rotation_dir) || !cJSON_IsNumber(turn_grad) || !cJSON_IsNumber(min_angle) || !cJSON_IsNumber(max_angle)) {
             cJSON_Delete(j);
             return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "missing profile params");
         }
 
         profile_t *p = &g_cfg.profiles[i];
         snprintf(p->name, sizeof(p->name), "%s", name->valuestring);
+        p->rotation_dir = (int)rotation_dir->valuedouble;
         p->rpm = (float)rpm->valuedouble;
         p->turn_grad = (float)turn_grad->valuedouble;
         p->min_angle = (float)min_angle->valuedouble;
